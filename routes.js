@@ -16,8 +16,17 @@ app.get('/allTasks', (req, res) => {
     });
 });
 
-app.get('/tasksActive', (req, res) => {
-    db.all('SELECT * FROM tb_tasks WHERE deleted = 0', (err, rows) => {
+app.get('/tasks/pending', (req, res) => {
+    const page = parseInt(req.query.page) || 1; 
+    const pageSize = parseInt(req.query.pageSize) || 5;
+
+    const startIndex = (page - 1) * pageSize;
+
+    const query = `
+        SELECT * FROM tb_tasks WHERE deleted = 0 AND completed = 0  LIMIT ? OFFSET ?
+    `;
+
+    db.all(query, [pageSize, startIndex], (err, rows) => {
         if (err) {
             console.error(err);
             res.status(500).json({ error: 'Error al obtener tareas' });
@@ -27,8 +36,16 @@ app.get('/tasksActive', (req, res) => {
     });
 });
 
-app.get('/tasksDeleted', (req, res) => {
-    db.all('SELECT * FROM tb_tasks WHERE deleted = 1', (err, rows) => {
+app.get('/tasks/completed', (req, res) => {
+    const page = parseInt(req.query.page) || 1; 
+    const pageSize = parseInt(req.query.pageSize) || 5;
+
+    const startIndex = (page - 1) * pageSize;
+    const query = `
+        SELECT * FROM tb_tasks WHERE deleted = 0 AND completed = 1 LIMIT ? OFFSET ?
+    `;
+    
+    db.all(query,[pageSize, startIndex], (err, rows) => {
         if (err) {
             console.error(err);
             res.status(500).json({ error: 'Error al obtener tareas' });
@@ -38,10 +55,27 @@ app.get('/tasksDeleted', (req, res) => {
     });
 });
 
+app.get('/tasks/deleted', (req, res) => {
+    const page = parseInt(req.query.page) || 1; 
+    const pageSize = parseInt(req.query.pageSize) || 5;
 
-app.post('/insertTask', (req, res) => {
+    const startIndex = (page - 1) * pageSize;
+    const query = `
+        SELECT * FROM tb_tasks WHERE deleted = 1 AND completed = 0 LIMIT ? OFFSET ?
+    `;
+    db.all(query,[pageSize, startIndex], (err, rows) => {
+        if (err) {
+            console.error(err);
+            res.status(500).json({ error: 'Error al obtener tareas' });
+            return;
+        }
+        res.json(rows);
+    });
+});
+
+app.post('/tasks/insert', (req, res) => {
     const { title, description } = req.body;
-    const dateCreated = new Date().toISOString();
+    const dateCreated = new Date().toISOString().split('T')[0];
 
     const query = `
         INSERT INTO tb_tasks (title, description, dateCreated)
@@ -59,7 +93,7 @@ app.post('/insertTask', (req, res) => {
     });
 });
 
-app.put('/updateTask/:id', (req, res) => {
+app.put('/tasks/update/:id', (req, res) => {
     const taskId = req.params.id;
     const { title, description } = req.body;
     const dateEdited = new Date().toISOString();
@@ -84,7 +118,7 @@ app.put('/updateTask/:id', (req, res) => {
 });
 
 // Ruta (soft delete)
-app.delete('/deleteTask/:id', (req, res) => {
+app.delete('/tasks/delete/:id', (req, res) => {
     const taskId = req.params.id;
 
     const query = `
@@ -103,7 +137,5 @@ app.delete('/deleteTask/:id', (req, res) => {
         res.json({ message: 'Tarea marcada como borrada correctamente' });
     });
 });
-
-
 
 module.exports = app;
