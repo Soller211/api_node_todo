@@ -16,6 +16,24 @@ app.get('/allTasks', (req, res) => {
     });
 });
 
+app.get('/tasks/all', (req, res) => {
+    const page = parseInt(req.query.page) || 1; 
+    const pageSize = parseInt(req.query.pageSize) || 5;
+
+    const startIndex = (page - 1) * pageSize;
+    const query = `
+        SELECT * FROM tb_tasks LIMIT ? OFFSET ?
+    `;
+    db.all(query,[pageSize, startIndex], (err, rows) => {
+        if (err) {
+            console.error(err);
+            res.status(500).json({ error: 'Error al obtener tareas' });
+            return;
+        }
+        res.json(rows);
+    });
+});
+
 app.get('/tasks/pending', (req, res) => {
     const page = parseInt(req.query.page) || 1; 
     const pageSize = parseInt(req.query.pageSize) || 5;
@@ -73,6 +91,8 @@ app.get('/tasks/deleted', (req, res) => {
     });
 });
 
+
+
 app.post('/tasks/insert', (req, res) => {
     const { title, description } = req.body;
     const dateCreated = new Date().toISOString().split('T')[0];
@@ -107,6 +127,26 @@ app.put('/tasks/update/:id', (req, res) => {
     `;
 
     db.run(query, [title, description, dateEdited, taskId], function(err) {
+        if (err) {
+            console.error('Error al actualizar el registro:', err.message);
+            res.status(500).json({ error: 'Error al actualizar el registro' });
+            return;
+        }
+        console.log('Registro actualizado correctamente, ID:', taskId);
+        res.json({ message: 'Registro actualizado correctamente' });
+    });
+});
+
+app.delete('/tasks/complete/:id', (req, res) => {
+    const taskId = req.params.id;
+
+    const query = `
+        UPDATE tb_tasks
+        SET completed = 1
+        WHERE id = ?
+    `;
+
+    db.run(query, [taskId], function(err) {
         if (err) {
             console.error('Error al actualizar el registro:', err.message);
             res.status(500).json({ error: 'Error al actualizar el registro' });
